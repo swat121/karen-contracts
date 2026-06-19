@@ -1,0 +1,75 @@
+# karen-contracts
+
+Canonical Kafka contract POJOs for the Karen home-automation ecosystem.
+
+**JitPack coordinate:** `com.github.swat121:karen-contracts:v0.1.0`
+
+Epic: TASK-26001
+
+---
+
+## Usage
+
+### 1. Add JitPack repository
+
+```xml
+<repositories>
+    <repository>
+        <id>jitpack.io</id>
+        <url>https://jitpack.io</url>
+    </repository>
+</repositories>
+```
+
+### 2. Add dependency
+
+```xml
+<dependency>
+    <groupId>com.github.swat121</groupId>
+    <artifactId>karen-contracts</artifactId>
+    <version>v0.1.0</version>
+</dependency>
+```
+
+---
+
+## Contracts (`com.karen.contracts.kafka`)
+
+| Class | Direction | Description |
+|-------|-----------|-------------|
+| `DeviceRegistrationConnectEvent` | device → control | Device connected / disconnected |
+| `DeviceRegistrationMetaEvent` | device → registration | Full device configuration on registration |
+| `FeatureEvent` | control → bot | Result of executing a feature command |
+| `FeatureCommand` | bot → control | Request to execute a feature on a device |
+
+---
+
+## Canonical decisions
+
+These decisions were made during TASK-26001 to resolve drift between
+`karen-device-registration` and `karen-device-control`:
+
+| Decision | Canonical value | Rationale |
+|----------|-----------------|-----------|
+| Inner command class name | `SupportedCommand` | Semantic clarity; avoids name collision with outer-scope `Command` patterns |
+| `Switch.switchId` type | `Integer` (not `int`) | Null-safe Jackson deserialization without required-field enforcement |
+| `SupportedCommand.version` type | `Integer` (not `int`) | Same null-safety reason; consistent with `FeatureCommand.version` |
+| `FeatureCommand.version` type | `Integer` (not `int`) | Eliminates latent NPE in consumers that receive partial payloads |
+
+> **Migration note:** `karen-device-registration` uses `Command` (not `SupportedCommand`) as
+> the inner class name. ModelMapper references to `.Command.class` must be updated when
+> migrating to this library (tracked in TASK-26002).
+
+---
+
+## Build
+
+This library requires Java 17 and does **not** inherit `spring-boot-starter-parent`.
+Dependency versions are pinned to match Spring Boot 3.2.3 BOM:
+
+- `jackson-databind:2.15.4` (Spring Boot 3.2.3 manages `jackson-bom.version=2.15.4`)
+- `lombok:1.18.30` (provided / optional — does not leak into consumers)
+
+```bash
+mvn -q -DskipTests package
+```
