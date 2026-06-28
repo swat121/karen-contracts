@@ -1,0 +1,15 @@
+{
+  "$id": "switch.relay.toggle.v1",
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "type": "object",
+  "title": "RelayToggle(v1)",
+  "description": "Включить и выключить реле-канал ESP-устройства",
+  "required": ["macAddress", "requestId", "command", "switchId"],
+  "properties": {
+    "command":    {"type": "string",  "title": "Switch commant", "description": "Команда для switch контроллера"},
+    "switchId":   {"type": "integer", "title": "Switch ID", "minimum": 1, "description": "Номер реле, как в meta-сообщении"},
+    "requestId":  {"type": "string",  "title": "RequestId", "description": "Идентификатор запроса"},
+    "macAddress": {"type": "string",  "title": "MacAddressESP", "description": "macAddress контроллера"}
+  },
+  "additionalProperties": false
+}

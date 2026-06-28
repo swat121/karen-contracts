@@ -1,0 +1,30 @@
+[
+  {
+    "commandId": "TOGGLE_LOCK",
+    "version": 1,
+    "feature": "switch",
+    "subtype": "relay",
+    "path": "schemas/switch/relay/TOGGLE_LOCK.v1.json"
+  },
+  {
+    "commandId": "FORSE_SWITCH_STATE",
+    "version": 1,
+    "feature": "switch",
+    "subtype": "relay",
+    "path": "schemas/switch/relay/FORSE_SWITCH_STATE.v1.json"
+  },
+  {
+    "commandId": "READ",
+    "version": 1,
+    "feature": "sensor",
+    "subtype": "temperature",
+    "path": "schemas/sensor/temperature/READ.v1.json"
+  },
+  {
+    "commandId": "READ_ALL",
+    "version": 1,
+    "feature": "sensor",
+    "subtype": "temperature",
+    "path": "schemas/sensor/temperature/READ_ALL.v1.json"
+  }
+]
