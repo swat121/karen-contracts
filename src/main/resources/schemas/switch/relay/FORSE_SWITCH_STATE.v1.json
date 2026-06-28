@@ -1,0 +1,15 @@
+{
+  "$id": "switch.relay.forse.switch.v1",
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "type": "object",
+  "title": "RelayForseSwitch(v1)",
+  "description": "Включить или выключить принудительно реле-канал ESP-устройства",
+  "required": ["macAddress", "requestId", "command", "switchId", "state"],
+  "properties": {
+    "state":      {"type": "string", "enum": ["on", "off"], "title": "Switch state", "description": "Состояние реле, вкл или выкл"},
+    "command":    {"type": "string", "title": "Switch commant", "description": "Команда для switch контроллера"},
+    "switchId":   {"type": "integer", "title": "Switch ID", "minimum": 1, "description": "Номер реле, как в meta-сообщении"},
+    "requestId":  {"type": "string", "title": "RequestId", "description": "Идентификатор запроса"},
+    "macAddress": {"type": "string", "title": "MacAddressESP", "description": "macAddress контроллера"}
+  }
+}

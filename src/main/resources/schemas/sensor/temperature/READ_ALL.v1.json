@@ -1,0 +1,14 @@
+{
+  "$id": "sensor.temperature.read_all.v1",
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "type": "object",
+  "title": "SensorReadAll(v1)",
+  "description": "Read all sensors of a device in one request",
+  "required": ["macAddress", "requestId", "command"],
+  "properties": {
+    "command":    {"type": "string", "title": "Command", "description": "Sensor command id (READ_ALL)"},
+    "requestId":  {"type": "string", "title": "RequestId", "description": "Request correlation id"},
+    "macAddress": {"type": "string", "title": "MacAddressESP", "description": "Target controller MAC (or wildcard)"}
+  },
+  "additionalProperties": false
+}
