@@ -7,14 +7,11 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import java.io.IOException;
 import java.io.InputStream;
 import java.nio.charset.StandardCharsets;
-import java.util.Collection;
-import java.util.Collections;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.NoSuchElementException;
 import java.util.Objects;
-import java.util.Optional;
 
 /**
  * Classpath-based accessor for the device command JSON Schemas bundled in this jar.
@@ -26,80 +23,49 @@ import java.util.Optional;
  *
  * <h3>Usage</h3>
  * <pre>{@code
- * SchemaCatalog catalog = SchemaCatalog.getDefault();
- * JsonNode schema = catalog.getSchema("TOGGLE_LOCK", 1);
+ * JsonNode schema = SchemaCatalog.getDefault().getSchema("TOGGLE_LOCK", 1);
  * }</pre>
  *
  * <p>No JSON-Schema validation engine is bundled. Consumers bring their own validator
- * and feed it the {@link JsonNode} or raw {@link String} returned by this class.
+ * and feed it the {@link JsonNode} returned by this class.
  */
 public class SchemaCatalog {
 
     private static final String CATALOG_PATH = "schemas/catalog.json";
 
-    /** Lazy-initialised default instance. */
+    /** Lazy-initialised shared instance. */
     private static volatile SchemaCatalog defaultInstance;
 
-    private final Map<String, SchemaRef> refIndex;
-    private final Map<String, JsonNode>  schemaIndex;
-    private final Map<String, String>    rawIndex;
-
-    // -------------------------------------------------------------------------
-    // Construction
-    // -------------------------------------------------------------------------
+    private final Map<String, JsonNode> schemaIndex;
 
     /**
-     * Creates a new {@code SchemaCatalog} by loading {@code schemas/catalog.json}
-     * from the current thread's context classloader (falls back to this class's classloader).
+     * Loads {@code schemas/catalog.json} and every referenced schema from the classpath.
      *
      * @throws IllegalStateException if the catalog or any referenced schema file is
      *                               missing or cannot be parsed
      */
     public SchemaCatalog() {
-        this(resolveClassLoader());
-    }
-
-    /**
-     * Creates a new {@code SchemaCatalog} using the supplied classloader.
-     * Useful for tests or OSGi-style environments where context classloader differs.
-     */
-    public SchemaCatalog(ClassLoader classLoader) {
+        ClassLoader classLoader = resolveClassLoader();
         ObjectMapper mapper = new ObjectMapper();
         List<SchemaRef> refs = loadCatalog(classLoader, mapper);
 
-        Map<String, SchemaRef> refMap    = new LinkedHashMap<>();
-        Map<String, JsonNode>  schemaMap = new LinkedHashMap<>();
-        Map<String, String>    rawMap    = new LinkedHashMap<>();
-
+        Map<String, JsonNode> index = new LinkedHashMap<>();
         for (SchemaRef ref : refs) {
             if (ref.getVersion() == null) {
                 throw new IllegalStateException(
                         "catalog.json entry for commandId='" + ref.getCommandId() + "' has null version");
             }
-            String key = key(ref.getCommandId(), ref.getVersion());
-            refMap.put(key, ref);
-
-            String raw = loadRaw(classLoader, ref);
-            rawMap.put(key, raw);
-
             JsonNode node;
             try {
-                node = mapper.readTree(raw);
+                node = mapper.readTree(loadRaw(classLoader, ref));
             } catch (IOException e) {
                 throw new IllegalStateException(
                         "Failed to parse JSON Schema at '" + ref.getPath() + "': " + e.getMessage(), e);
             }
-            schemaMap.put(key, node);
+            index.put(key(ref.getCommandId(), ref.getVersion()), node);
         }
-
-        this.refIndex    = Collections.unmodifiableMap(refMap);
-        this.schemaIndex = Collections.unmodifiableMap(schemaMap);
-        this.rawIndex    = Collections.unmodifiableMap(rawMap);
+        this.schemaIndex = Map.copyOf(index);
     }
-
-    // -------------------------------------------------------------------------
-    // Public API
-    // -------------------------------------------------------------------------
 
     /**
      * Returns the JSON Schema {@link JsonNode} for the given {@code (commandId, version)} key.
@@ -116,41 +82,8 @@ public class SchemaCatalog {
     }
 
     /**
-     * Returns an {@link Optional} containing the JSON Schema, or empty if not found.
-     */
-    public Optional<JsonNode> findSchema(String commandId, int version) {
-        return Optional.ofNullable(schemaIndex.get(key(commandId, version)));
-    }
-
-    /**
-     * Returns the raw JSON Schema string for the given {@code (commandId, version)} key.
-     *
-     * @throws NoSuchElementException if no schema is registered for this key
-     */
-    public String getRawSchema(String commandId, int version) {
-        String raw = rawIndex.get(key(commandId, version));
-        if (raw == null) {
-            throw new NoSuchElementException(
-                    "No schema registered for commandId='" + commandId + "', version=" + version);
-        }
-        return raw;
-    }
-
-    /**
-     * Returns all registered {@link SchemaRef} entries in catalog order.
-     */
-    public Collection<SchemaRef> listRefs() {
-        return refIndex.values();
-    }
-
-    // -------------------------------------------------------------------------
-    // Static default
-    // -------------------------------------------------------------------------
-
-    /**
      * Returns a shared, lazily-initialised {@code SchemaCatalog} instance.
-     * Equivalent to {@code new SchemaCatalog()} but reuses the same object on
-     * repeated calls. Safe for concurrent use (double-checked locking).
+     * Safe for concurrent use (double-checked locking).
      */
     public static SchemaCatalog getDefault() {
         if (defaultInstance == null) {

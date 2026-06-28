@@ -108,15 +108,6 @@ SchemaCatalog catalog = new SchemaCatalog();
 
 // Look up a schema as JsonNode (throws NoSuchElementException if absent)
 JsonNode schema = catalog.getSchema("TOGGLE_LOCK", 1);
-
-// Non-throwing variant
-Optional<JsonNode> maybeSchema = catalog.findSchema("TOGGLE_LOCK", 1);
-
-// Raw JSON string (e.g. to pass to an external validator)
-String rawSchema = catalog.getRawSchema("TOGGLE_LOCK", 1);
-
-// Enumerate all entries
-Collection<SchemaRef> refs = catalog.listRefs(); // size == 4
 ```
 
 The constructor is **fail-fast**: a missing or unparseable `catalog.json`, or any referenced
@@ -125,7 +116,7 @@ schema file being absent, throws `IllegalStateException` immediately — not laz
 > **No validation engine is bundled.**  `SchemaCatalog` only loads and indexes schemas using
 > `jackson-databind` (already a transitive dependency). Each consumer brings its own
 > JSON-Schema validator (e.g. networknt/json-schema-validator, fge/json-schema-validator) and
-> feeds it the `JsonNode` or raw `String` returned by this class.
+> feeds it the `JsonNode` returned by this class.
 
 ---
 
