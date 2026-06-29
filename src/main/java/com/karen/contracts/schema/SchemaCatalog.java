@@ -37,6 +37,7 @@ public class SchemaCatalog {
     private static volatile SchemaCatalog defaultInstance;
 
     private final Map<String, JsonNode> schemaIndex;
+    private final Map<String, String>   featureIndex;
 
     /**
      * Loads {@code schemas/catalog.json} and every referenced schema from the classpath.
@@ -49,11 +50,16 @@ public class SchemaCatalog {
         ObjectMapper mapper = new ObjectMapper();
         List<SchemaRef> refs = loadCatalog(classLoader, mapper);
 
-        Map<String, JsonNode> index = new LinkedHashMap<>();
+        Map<String, JsonNode> schemas  = new LinkedHashMap<>();
+        Map<String, String>   features = new LinkedHashMap<>();
         for (SchemaRef ref : refs) {
             if (ref.getVersion() == null) {
                 throw new IllegalStateException(
                         "catalog.json entry for commandId='" + ref.getCommandId() + "' has null version");
+            }
+            if (ref.getFeature() == null) {
+                throw new IllegalStateException(
+                        "catalog.json entry for commandId='" + ref.getCommandId() + "' has null feature");
             }
             JsonNode node;
             try {
@@ -62,9 +68,12 @@ public class SchemaCatalog {
                 throw new IllegalStateException(
                         "Failed to parse JSON Schema at '" + ref.getPath() + "': " + e.getMessage(), e);
             }
-            index.put(key(ref.getCommandId(), ref.getVersion()), node);
+            String k = key(ref.getCommandId(), ref.getVersion());
+            schemas.put(k, node);
+            features.put(k, ref.getFeature());
         }
-        this.schemaIndex = Map.copyOf(index);
+        this.schemaIndex  = Map.copyOf(schemas);
+        this.featureIndex = Map.copyOf(features);
     }
 
     /**
@@ -79,6 +88,22 @@ public class SchemaCatalog {
                     "No schema registered for commandId='" + commandId + "', version=" + version);
         }
         return node;
+    }
+
+    /**
+     * Returns the feature group (e.g. {@code "switch"}, {@code "sensor"}) that the command
+     * belongs to, as declared in the catalog manifest. Callers use this to route a command
+     * to the right device feature without carrying the feature type through the UI.
+     *
+     * @throws NoSuchElementException if no schema is registered for this key
+     */
+    public String getFeature(String commandId, int version) {
+        String feature = featureIndex.get(key(commandId, version));
+        if (feature == null) {
+            throw new NoSuchElementException(
+                    "No schema registered for commandId='" + commandId + "', version=" + version);
+        }
+        return feature;
     }
 
     /**
