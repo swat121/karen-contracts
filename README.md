@@ -108,6 +108,9 @@ SchemaCatalog catalog = new SchemaCatalog();
 
 // Look up a schema as JsonNode (throws NoSuchElementException if absent)
 JsonNode schema = catalog.getSchema("TOGGLE_LOCK", 1);
+
+// The feature group the command belongs to ("switch" / "sensor") — for routing
+String feature = catalog.getFeature("TOGGLE_LOCK", 1); // -> "switch"
 ```
 
 The constructor is **fail-fast**: a missing or unparseable `catalog.json`, or any referenced
