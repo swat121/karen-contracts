@@ -2,7 +2,7 @@
 
 Canonical Kafka contract POJOs for the Karen home-automation ecosystem.
 
-**JitPack coordinate:** `com.github.swat121:karen-contracts:v0.1.0`
+**JitPack coordinate:** `com.github.swat121:karen-contracts:v0.4.0`
 
 Epic: TASK-26001
 
@@ -27,7 +27,7 @@ Epic: TASK-26001
 <dependency>
     <groupId>com.github.swat121</groupId>
     <artifactId>karen-contracts</artifactId>
-    <version>v0.1.0</version>
+    <version>v0.4.0</version>
 </dependency>
 ```
 
@@ -41,6 +41,35 @@ Epic: TASK-26001
 | `DeviceRegistrationMetaEvent` | device → registration | Full device configuration on registration |
 | `FeatureEvent` | control → bot | Result of executing a feature command |
 | `FeatureCommand` | bot → control | Request to execute a feature on a device |
+
+### `FeatureEvent.payload` shape
+
+Starting from **v0.4.0**, `FeatureEvent` carries a structured `payload: JsonNode` alongside the
+existing `message` string. For sensor `READ` and `READ_ALL` results, `payload` is always the same
+wrapper object — one reading for `READ`, all readings for `READ_ALL`:
+
+```json
+{
+  "readings": [
+    {
+      "address": "28FF641E9C160423",
+      "type": "temperature",
+      "unit": "celsius",
+      "value": 21.5,
+      "timestamp": 1754034300
+    }
+  ]
+}
+```
+
+`timestamp` is Unix epoch **seconds**, not an ISO-8601 string: the firmware emits
+`time(nullptr)` directly (`KarenDevicePresence.cpp:517`). `READ_ALL` entries carry an extra
+per-reading `ok` flag (`KarenDevicePresence.cpp:550`), since one failed sensor must not drop the
+whole batch; a single `READ` reports failure through `commandStatus` instead.
+
+The object wrapper (not a bare array) leaves room for future top-level fields (e.g. `deviceId`,
+`errorMessage`) without breaking the contract. `payload` is absent (`null`) for non-sensor
+features until they adopt a shape of their own.
 
 ---
 
@@ -82,6 +111,19 @@ classpath scanning.
 | `FORSE_SWITCH_STATE` | 1 | switch | relay | `schemas/switch/relay/FORSE_SWITCH_STATE.v1.json` |
 | `READ` | 1 | sensor | temperature | `schemas/sensor/temperature/READ.v1.json` |
 | `READ_ALL` | 1 | sensor | temperature | `schemas/sensor/temperature/READ_ALL.v1.json` |
+
+> **Envelope shape is inconsistent by design.** `sensor` commands (`READ`) nest their
+> command-specific fields under a `payload` object, because the firmware reads
+> `doc["payload"]["sensorAddress"]` and cannot be changed without physical re-flashing. `switch`
+> commands (`TOGGLE_LOCK`, `FORSE_SWITCH_STATE`) keep a flat root instead. Do not "align" one
+> style onto the other without checking the firmware first — see `READ.v1.json`'s `description`.
+
+> **`READ.v1` was reshaped in place in v0.4.0 — this is not a precedent.** The version published
+> in `v0.3.0` declared a flat `sensorAddress` that no board could ever accept, and no consumer had
+> adopted it yet, so nothing could break. Bumping to `READ.v2` was not an option either: the
+> firmware advertises `supportedCommands: [{"READ", 1}]` and `karen-device-control` rejects any
+> other version, so a v2 schema would require re-flashing every board. **A published schema that
+> real producers already use must get a new `.vN` file instead.**
 
 ### `catalog.json` manifest shape
 
