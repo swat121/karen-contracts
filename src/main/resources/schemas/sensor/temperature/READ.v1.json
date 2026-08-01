@@ -3,13 +3,22 @@
   "$schema": "http://json-schema.org/draft-07/schema#",
   "type": "object",
   "title": "SensorRead(v1)",
-  "description": "Read a single sensor by its ROM address",
-  "required": ["macAddress", "requestId", "command", "sensorAddress"],
+  "description": "Read a single sensor by its ROM address. The envelope is nested (sensorAddress lives under payload) because the firmware reads doc[\"payload\"][\"sensorAddress\"] (KarenDevicePresence.cpp:487) — do not flatten this back to a root-level field.",
+  "required": ["macAddress", "requestId", "command", "payload"],
   "properties": {
-    "command":       {"type": "string", "title": "Command", "description": "Sensor command id (READ)"},
-    "requestId":     {"type": "string", "title": "RequestId", "description": "Request correlation id"},
-    "macAddress":    {"type": "string", "title": "MacAddressESP", "description": "Target controller MAC (or wildcard)"},
-    "sensorAddress": {"type": "string", "title": "SensorAddress", "description": "1-Wire ROM address of the sensor"}
+    "command":   {"type": "string", "title": "Command", "description": "Sensor command id (READ)"},
+    "requestId": {"type": "string", "title": "RequestId", "description": "Request correlation id"},
+    "macAddress": {"type": "string", "title": "MacAddressESP", "description": "Target controller MAC (or wildcard)"},
+    "payload": {
+      "type": "object",
+      "title": "Payload",
+      "description": "Nested command payload required by the firmware",
+      "required": ["sensorAddress"],
+      "properties": {
+        "sensorAddress": {"type": "string", "title": "SensorAddress", "description": "1-Wire ROM address of the sensor"}
+      },
+      "additionalProperties": false
+    }
   },
   "additionalProperties": false
 }
