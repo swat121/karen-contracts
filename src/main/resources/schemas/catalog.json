@@ -14,6 +14,13 @@
     "path": "schemas/switch/relay/FORSE_SWITCH_STATE.v1.json"
   },
   {
+    "commandId": "FORCE_SWITCH_STATE",
+    "version": 1,
+    "feature": "switch",
+    "subtype": "relay",
+    "path": "schemas/switch/relay/FORCE_SWITCH_STATE.v1.json"
+  },
+  {
     "commandId": "READ",
     "version": 1,
     "feature": "sensor",

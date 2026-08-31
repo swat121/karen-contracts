@@ -1,0 +1,15 @@
+{
+  "$id": "switch.relay.force.switch.v1",
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "type": "object",
+  "title": "RelayForceSwitch(v1)",
+  "description": "Включить или выключить принудительно реле-канал ESP-устройства. Корректное написание команды; FORSE_SWITCH_STATE v1 — тот же контракт под историческим именем с опечаткой, оставлен для уже залитых прошивок. Оба идентификатора обслуживаются одним обработчиком в KarenDevicePresence начиная с v2.4.0, потребители обязаны считать их одной командой.",
+  "required": ["macAddress", "requestId", "command", "switchId", "state"],
+  "properties": {
+    "state":      {"type": "string", "enum": ["on", "off"], "title": "Switch state", "description": "Состояние реле, вкл или выкл. Регистр значим: прошивка сравнивает строго с \"on\""},
+    "command":    {"type": "string", "title": "Switch command", "description": "Команда для switch контроллера"},
+    "switchId":   {"type": "integer", "title": "Switch ID", "minimum": 1, "description": "Номер реле, как в meta-сообщении"},
+    "requestId":  {"type": "string", "title": "RequestId", "description": "Идентификатор запроса"},
+    "macAddress": {"type": "string", "title": "MacAddressESP", "description": "macAddress контроллера"}
+  }
+}
