@@ -108,14 +108,26 @@ classpath scanning.
 | commandId | version | feature | subtype | file |
 |-----------|---------|---------|---------|------|
 | `TOGGLE_LOCK` | 1 | switch | relay | `schemas/switch/relay/TOGGLE_LOCK.v1.json` |
+| `FORCE_SWITCH_STATE` | 1 | switch | relay | `schemas/switch/relay/FORCE_SWITCH_STATE.v1.json` |
 | `FORSE_SWITCH_STATE` | 1 | switch | relay | `schemas/switch/relay/FORSE_SWITCH_STATE.v1.json` |
 | `READ` | 1 | sensor | temperature | `schemas/sensor/temperature/READ.v1.json` |
 | `READ_ALL` | 1 | sensor | temperature | `schemas/sensor/temperature/READ_ALL.v1.json` |
 
+> **`FORCE_SWITCH_STATE` and `FORSE_SWITCH_STATE` are the same command.** The original id carries
+> a typo that reached the firmware and was kept there deliberately. Since **v0.5.0** the catalog
+> also ships the corrected spelling, pointing at an identical contract; `KarenDevicePresence`
+> v2.4.0 registers both ids under one handler and advertises both in
+> `switches[].supportedCommands`. Boards flashed before that advertise only `FORSE_*`, so
+> **consumers must normalise the name before comparing** rather than matching the string exactly.
+> The old id is not removed — doing so would break every board already in the field.
+>
+> A new id rather than `FORCE_SWITCH_STATE.v2`: `version` here means the version of the payload
+> schema, and renaming a command does not change its payload.
+
 > **Envelope shape is inconsistent by design.** `sensor` commands (`READ`) nest their
 > command-specific fields under a `payload` object, because the firmware reads
 > `doc["payload"]["sensorAddress"]` and cannot be changed without physical re-flashing. `switch`
-> commands (`TOGGLE_LOCK`, `FORSE_SWITCH_STATE`) keep a flat root instead. Do not "align" one
+> commands (`TOGGLE_LOCK`, `FORCE_SWITCH_STATE`/`FORSE_SWITCH_STATE`) keep a flat root instead. Do not "align" one
 > style onto the other without checking the firmware first — see `READ.v1.json`'s `description`.
 
 > **`READ.v1` was reshaped in place in v0.4.0 — this is not a precedent.** The version published
