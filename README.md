@@ -2,7 +2,7 @@
 
 Canonical Kafka contract POJOs for the Karen home-automation ecosystem.
 
-**JitPack coordinate:** `com.github.swat121:karen-contracts:v0.4.0`
+**JitPack coordinate:** `com.github.swat121:karen-contracts:v0.6.0`
 
 Epic: TASK-26001
 
@@ -27,7 +27,7 @@ Epic: TASK-26001
 <dependency>
     <groupId>com.github.swat121</groupId>
     <artifactId>karen-contracts</artifactId>
-    <version>v0.4.0</version>
+    <version>v0.6.0</version>
 </dependency>
 ```
 
@@ -70,6 +70,67 @@ whole batch; a single `READ` reports failure through `commandStatus` instead.
 The object wrapper (not a bare array) leaves room for future top-level fields (e.g. `deviceId`,
 `errorMessage`) without breaking the contract. `payload` is absent (`null`) for non-sensor
 features until they adopt a shape of their own.
+
+---
+
+## Automation contracts (`com.karen.contracts.kafka.automation`)
+
+Starting from **v0.6.0**, this package carries the Chain Controller ↔ adapter protocol (design
+doc `karen-automation-design.md`, §23). It has no schema-catalog entries of its own: these are
+plain Kafka messages, validated only by the classes themselves.
+
+| Class | Direction | Topic | Key |
+|-------|-----------|-------|-----|
+| `AdapterExecutionCommand` | Controller → adapter | `activationTopic` (per adapter definition, from the catalog) | `executionId` |
+| `AdapterExecutionEvent` | adapter → Controller | `eventTopic` (per adapter definition, from the catalog) | `executionId` |
+| `AdapterDefinitionChangedEvent` | Builder → Controller | `automation.definition.changed` | `definitionKey` |
+
+`executionId` is the partition key for the first two topics: `adapterVersion` only *detects*
+out-of-order delivery, it does not prevent it, so ordering within one execution has to come from
+the partition (§23.3). `definitionKey` is the key for `automation.definition.changed` so that
+republish and update overwrite the previous value under log-compaction, and a future definition
+delete can be a tombstone (`null` value, same key) without a contract change (§23.7 item 2).
+
+### Wire values
+
+Unlike the older classes in `com.karen.contracts.kafka` (`status`, `commandStatus` — plain
+strings), this package uses typed enums: the vocabulary is closed and symmetric on both ends of
+the wire, and error codes in particular need a fixed set Controller can switch on. Enum wire
+values are PascalCase, set through `@JsonProperty` on each constant, not the Java constant name
+itself:
+
+| Enum | Constant | Wire value |
+|------|----------|------------|
+| `AdapterCommandType` | `START_ADAPTER_EXECUTION` | `StartAdapterExecution` |
+| `AdapterCommandType` | `TERMINATE_ADAPTER_EXECUTION` | `TerminateAdapterExecution` |
+| `AdapterEventType` | `ADAPTER_EXECUTION_STARTED` | `AdapterExecutionStarted` |
+| `AdapterEventType` | `ADAPTER_EXECUTION_COMPLETED` | `AdapterExecutionCompleted` |
+| `AdapterEventType` | `ADAPTER_EXECUTION_FAILED` | `AdapterExecutionFailed` |
+| `AdapterEventType` | `ADAPTER_EXECUTION_TERMINATED` | `AdapterExecutionTerminated` |
+
+`AdapterErrorCode` (`DEVICE_UNAVAILABLE`, `DEVICE_REJECTED`, `CONFIG_OUTDATED`,
+`CONFIG_NOT_FOUND`, `INTERNAL`) has no `@JsonProperty` mapping: its wire value is the constant
+name itself. `TIMEOUT` is not a constant here — the adapter never sends it, only Controller sets
+it when a response never arrives (§21.5).
+
+`configVersion`, `actionId`, `errorCode` and `errorMessage` are conditional on `commandType` /
+`eventType` (§23.4, §23.6) and must be physically absent from the JSON when not applicable, not
+present as `null`. Each of those four fields carries `@JsonInclude(NON_NULL)` individually — the
+annotation is deliberately **not** on the class. Every other field is mandatory, and a mandatory
+field left unset is a producer bug: it has to appear on the wire as `null` rather than vanish into
+a shape a consumer cannot tell apart from a valid message.
+
+> **No `UNKNOWN` fallback constant.** None of these enums declares an `UNKNOWN` /
+> `@JsonEnumDefaultValue` catch-all — §23 does not define one, and adding one here would be
+> guessing at a future contract. A consumer on an older version of this library that receives a
+> wire value introduced by a newer producer (e.g. a `v0.7.0` error code) will fail deserialization
+> by default. Consumers that need to tolerate that should either enable Jackson's
+> `DeserializationFeature.READ_UNKNOWN_ENUM_VALUES_USING_DEFAULT_VALUE` together with
+> `@JsonEnumDefaultValue`, or catch and handle the deserialization error themselves.
+
+See §23 of `karen-automation-design.md` for the full design rationale (message ordering,
+`configVersion`, the adapter-definition sync flow, and the open questions tracked for later
+tickets).
 
 ---
 
