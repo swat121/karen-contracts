@@ -36,4 +36,19 @@ public class AdapterDefinitionChangedEvent {
 
     /** Topic the adapter publishes {@link AdapterExecutionEvent} to for this definition. */
     private String eventTopic;
+
+    /**
+     * Whether this adapter definition's execution has a hard timeout enforced by Controller
+     * (design doc §10.1) -- e.g. {@code true} for {@code switch}/{@code delay} definitions,
+     * {@code false} for {@code sensor} ones. Present starting from v0.7.0.
+     *
+     * <p>{@code null} means the message came from a producer older than v0.7.0, not that the
+     * definition has no timeout -- Controller must treat {@code null} and {@code false}
+     * differently (no deadline plus a WARN log, versus a deadline that is deliberately absent).
+     *
+     * <p>No {@code @JsonInclude(NON_NULL)} on this field: for a v0.7.0 producer it applies to
+     * every definition, so an unset value is a producer bug and must appear on the wire as
+     * {@code null} rather than vanish into a shape indistinguishable from a pre-v0.7.0 message.
+     */
+    private Boolean hasExecutionTimeout;
 }

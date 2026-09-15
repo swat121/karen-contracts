@@ -203,6 +203,7 @@ class AutomationContractsSerializationTest {
                 .definitionKey("switch.relay")
                 .activationTopic("automation.switch.relay.activation")
                 .eventTopic("automation.switch.relay.event")
+                .hasExecutionTimeout(true)
                 .build();
 
         String json = mapper.writeValueAsString(event);
@@ -211,5 +212,77 @@ class AutomationContractsSerializationTest {
 
         assertEquals(event, roundTripped);
         assertNull(mapper.readTree(json).get("changeType"));
+    }
+
+    @Test
+    void definitionChangedEventCarriesHasExecutionTimeoutTrue() throws Exception {
+        AdapterDefinitionChangedEvent event = AdapterDefinitionChangedEvent.builder()
+                .definitionKey("switch.relay")
+                .activationTopic("automation.switch.relay.activation")
+                .eventTopic("automation.switch.relay.event")
+                .hasExecutionTimeout(true)
+                .build();
+
+        String json = mapper.writeValueAsString(event);
+        JsonNode node = mapper.readTree(json);
+
+        assertTrue(node.has("hasExecutionTimeout"));
+        assertTrue(node.get("hasExecutionTimeout").asBoolean());
+
+        AdapterDefinitionChangedEvent roundTripped =
+                mapper.readValue(json, AdapterDefinitionChangedEvent.class);
+        assertEquals(event, roundTripped);
+    }
+
+    @Test
+    void definitionChangedEventKeepsHasExecutionTimeoutFalseOnTheWire() throws Exception {
+        AdapterDefinitionChangedEvent event = AdapterDefinitionChangedEvent.builder()
+                .definitionKey("sensor.temperature")
+                .activationTopic("automation.sensor.temperature.activation")
+                .eventTopic("automation.sensor.temperature.event")
+                .hasExecutionTimeout(false)
+                .build();
+
+        String json = mapper.writeValueAsString(event);
+        JsonNode node = mapper.readTree(json);
+
+        // false must stay on the wire as false, not be swallowed like a NON_NULL field would.
+        assertTrue(node.has("hasExecutionTimeout"));
+        assertFalse(node.get("hasExecutionTimeout").asBoolean());
+
+        AdapterDefinitionChangedEvent roundTripped =
+                mapper.readValue(json, AdapterDefinitionChangedEvent.class);
+        assertEquals(Boolean.FALSE, roundTripped.getHasExecutionTimeout());
+    }
+
+    @Test
+    void legacyDefinitionChangedEventWithoutHasExecutionTimeoutDeserializesToNull() throws Exception {
+        // A v0.6.0 producer never wrote this key; a v0.7.0 consumer must read it as null, not false.
+        String json = "{"
+                + "\"definitionKey\":\"switch.relay\","
+                + "\"activationTopic\":\"automation.switch.relay.activation\","
+                + "\"eventTopic\":\"automation.switch.relay.event\""
+                + "}";
+
+        AdapterDefinitionChangedEvent event =
+                mapper.readValue(json, AdapterDefinitionChangedEvent.class);
+
+        assertNull(event.getHasExecutionTimeout());
+    }
+
+    @Test
+    void definitionChangedEventWithUnsetHasExecutionTimeoutStaysNullOnTheWire() throws Exception {
+        // Insurance against @JsonInclude(NON_NULL) accidentally landing on this field: an unset
+        // value from a v0.7.0 producer is a producer bug and must appear on the wire as null.
+        AdapterDefinitionChangedEvent event = AdapterDefinitionChangedEvent.builder()
+                .definitionKey("switch.relay")
+                .activationTopic("automation.switch.relay.activation")
+                .eventTopic("automation.switch.relay.event")
+                .build();
+
+        JsonNode node = mapper.readTree(mapper.writeValueAsString(event));
+
+        assertTrue(node.has("hasExecutionTimeout"));
+        assertTrue(node.get("hasExecutionTimeout").isNull());
     }
 }
