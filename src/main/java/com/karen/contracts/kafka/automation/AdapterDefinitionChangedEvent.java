@@ -17,9 +17,9 @@ import lombok.NoArgsConstructor;
  * re-publishes every existing definition for first-time and manual resync.
  *
  * <p>Message key is {@code definitionKey}, and this is not incidental: it orders messages for one
- * definition, republish overwrites the previous value under log compaction, and a future delete
- * (not yet defined, design doc section 23.7 item 2) is meant to be a tombstone -- a {@code null}
- * value under the same key -- without any contract change.
+ * definition, republish overwrites the previous value under log compaction, and a definition
+ * delete (design doc section 23.7 item 2) is a tombstone -- a {@code null} value under the same
+ * key -- without any contract change.
  */
 @Data
 @Builder
