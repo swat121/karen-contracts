@@ -17,9 +17,9 @@ import lombok.NoArgsConstructor;
  * re-publishes every existing definition for first-time and manual resync.
  *
  * <p>Message key is {@code definitionKey}, and this is not incidental: it orders messages for one
- * definition, republish overwrites the previous value under log compaction, and a future delete
- * (not yet defined, design doc section 23.7 item 2) is meant to be a tombstone -- a {@code null}
- * value under the same key -- without any contract change.
+ * definition, republish overwrites the previous value under log compaction, and a definition
+ * delete (design doc section 23.7 item 2) is a tombstone -- a {@code null} value under the same
+ * key -- without any contract change.
  */
 @Data
 @Builder
@@ -36,4 +36,19 @@ public class AdapterDefinitionChangedEvent {
 
     /** Topic the adapter publishes {@link AdapterExecutionEvent} to for this definition. */
     private String eventTopic;
+
+    /**
+     * Whether this adapter definition's execution has a hard timeout enforced by Controller
+     * (design doc §10.1) -- e.g. {@code true} for {@code switch}/{@code delay} definitions,
+     * {@code false} for {@code sensor} ones. Present starting from v0.7.0.
+     *
+     * <p>{@code null} means the message came from a producer older than v0.7.0, not that the
+     * definition has no timeout -- Controller must treat {@code null} and {@code false}
+     * differently (no deadline plus a WARN log, versus a deadline that is deliberately absent).
+     *
+     * <p>No {@code @JsonInclude(NON_NULL)} on this field: for a v0.7.0 producer it applies to
+     * every definition, so an unset value is a producer bug and must appear on the wire as
+     * {@code null} rather than vanish into a shape indistinguishable from a pre-v0.7.0 message.
+     */
+    private Boolean hasExecutionTimeout;
 }

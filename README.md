@@ -2,7 +2,7 @@
 
 Canonical Kafka contract POJOs for the Karen home-automation ecosystem.
 
-**JitPack coordinate:** `com.github.swat121:karen-contracts:v0.6.0`
+**JitPack coordinate:** `com.github.swat121:karen-contracts:v0.7.0`
 
 Epic: TASK-26001
 
@@ -27,7 +27,7 @@ Epic: TASK-26001
 <dependency>
     <groupId>com.github.swat121</groupId>
     <artifactId>karen-contracts</artifactId>
-    <version>v0.6.0</version>
+    <version>v0.7.0</version>
 </dependency>
 ```
 
@@ -88,8 +88,23 @@ plain Kafka messages, validated only by the classes themselves.
 `executionId` is the partition key for the first two topics: `adapterVersion` only *detects*
 out-of-order delivery, it does not prevent it, so ordering within one execution has to come from
 the partition (§23.3). `definitionKey` is the key for `automation.definition.changed` so that
-republish and update overwrite the previous value under log-compaction, and a future definition
-delete can be a tombstone (`null` value, same key) without a contract change (§23.7 item 2).
+republish and update overwrite the previous value under log-compaction, and a definition delete is
+a tombstone (`null` value, same key) without a contract change (§23.7 item 2).
+
+### Starting from v0.7.0: `hasExecutionTimeout`
+
+`AdapterDefinitionChangedEvent` carries `hasExecutionTimeout: Boolean` -- whether this definition's
+execution has a hard timeout enforced by Controller (§10.1), e.g. `true` for `switch`/`delay`
+definitions, `false` for `sensor` ones. There is no `@JsonInclude(NON_NULL)` on it: like every
+other field in this class it is mandatory for a v0.7.0 producer, so an unset value must appear on
+the wire as `null` rather than vanish.
+
+`null` on the wire means the message came from a producer older than v0.7.0, not that the
+definition has no timeout -- a v0.7.0 consumer must not treat `null` the same as `false`.
+Concretely: after upgrading Builder to a version that sets this field, every definition already
+sitting in the compacted `automation.definition.changed` topic still has the old shape until
+Builder's `republish` endpoint is called once; until then Controller keeps seeing `null` for those
+definitions.
 
 ### Wire values
 

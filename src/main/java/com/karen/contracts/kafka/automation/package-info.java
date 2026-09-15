@@ -13,9 +13,10 @@
  *       Controller reads.
  *   <li>{@code automation.definition.changed} (catalog-wide) --
  *       {@link com.karen.contracts.kafka.automation.AdapterDefinitionChangedEvent}: Builder writes
- *       on adapter-definition create/update, Controller reads to learn {@code activationTopic} /
- *       {@code eventTopic} from Kafka rather than from the start request; see the class Javadoc
- *       for the restart caveat.
+ *       on adapter-definition create/update, and a tombstone (a {@code null} value under the same
+ *       key) on delete. Controller reads to learn {@code activationTopic} / {@code eventTopic}
+ *       from Kafka rather than from the start request; see the class Javadoc for the restart
+ *       caveat.
  * </ul>
  */
 package com.karen.contracts.kafka.automation;
