@@ -2,7 +2,7 @@
 
 Canonical Kafka contract POJOs for the Karen home-automation ecosystem.
 
-**JitPack coordinate:** `com.github.swat121:karen-contracts:v0.7.0`
+**JitPack coordinate:** `com.github.swat121:karen-contracts:v0.8.0`
 
 Epic: TASK-26001
 
@@ -27,7 +27,7 @@ Epic: TASK-26001
 <dependency>
     <groupId>com.github.swat121</groupId>
     <artifactId>karen-contracts</artifactId>
-    <version>v0.7.0</version>
+    <version>v0.8.0</version>
 </dependency>
 ```
 
@@ -41,6 +41,7 @@ Epic: TASK-26001
 | `DeviceRegistrationMetaEvent` | device → registration | Full device configuration on registration |
 | `FeatureEvent` | control → bot | Result of executing a feature command |
 | `FeatureCommand` | bot → control | Request to execute a feature on a device |
+| `SensorDataEvent` | control → telemetry subscribers | One successful sensor reading |
 
 ### `FeatureEvent.payload` shape
 
@@ -70,6 +71,19 @@ whole batch; a single `READ` reports failure through `commandStatus` instead.
 The object wrapper (not a bare array) leaves room for future top-level fields (e.g. `deviceId`,
 `errorMessage`) without breaking the contract. `payload` is absent (`null`) for non-sensor
 features until they adopt a shape of their own.
+
+---
+
+### Starting from v0.8.0: `SensorDataEvent`
+
+`karen-device-control` publishes one `SensorDataEvent` per successfully read sensor reading
+(`ok != false`) to the `karen.sensor.data` topic, keyed by `deviceId`. Readings that failed
+(`ok:false`) are not published. `type` is upper-cased on the wire (e.g. `TEMPERATURE`).
+`measuredAt` is server time — `Instant.now()` at the moment of publication, epoch
+milliseconds — not the firmware's own reading timestamp.
+
+Running more than one `karen-device-control` replica can produce duplicate events for the
+same reading: delivery has no idempotency key and consumers must tolerate duplicates.
 
 ---
 
